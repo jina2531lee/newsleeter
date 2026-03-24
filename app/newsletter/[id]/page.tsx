@@ -61,7 +61,7 @@ export default async function NewsletterPage({
 
       {/* 섹션 목차 */}
       <nav className="mb-8 flex flex-wrap gap-2">
-        {newsletter.sections.map((s) => (
+        {newsletter.sections.map((s: (typeof newsletter.sections)[number]) => (
           <a
             key={s.id}
             href={`#section-${s.id}`}
@@ -74,7 +74,7 @@ export default async function NewsletterPage({
 
       {/* 섹션 본문 */}
       <div className="space-y-12">
-        {newsletter.sections.map((section) => {
+        {newsletter.sections.map((section: (typeof newsletter.sections)[number]) => {
           const meta = CATEGORY_META[section.category as CategoryKey];
           return (
             <section key={section.id} id={`section-${section.id}`}>
@@ -88,7 +88,7 @@ export default async function NewsletterPage({
                 </div>
               </div>
               <div className="space-y-4">
-                {section.items.map((item) => (
+                {section.items.map((item: (typeof section.items)[number]) => (
                   <NewsItemBlock key={item.id} item={item} />
                 ))}
               </div>
