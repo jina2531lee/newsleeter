@@ -82,16 +82,21 @@ async function generateNewsletter() {
   });
 
   // 최종 텍스트 응답 추출
-  let jsonText = "";
+  let rawText = "";
   for (const block of response.content) {
     if (block.type === "text") {
-      jsonText = block.text;
+      rawText = block.text;
       break;
     }
   }
 
-  // JSON 파싱 (코드 블록 제거)
-  jsonText = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  // JSON 객체만 추출 (앞뒤 텍스트 제거)
+  const start = rawText.indexOf("{");
+  const end = rawText.lastIndexOf("}");
+  if (start === -1 || end === -1) {
+    throw new Error(`JSON을 찾을 수 없습니다. 응답:\n${rawText.slice(0, 500)}`);
+  }
+  const jsonText = rawText.slice(start, end + 1);
   const newsletter = JSON.parse(jsonText);
 
   console.log("📝 생성된 뉴스레터:", newsletter.title);
