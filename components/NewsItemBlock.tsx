@@ -1,3 +1,6 @@
+"use client";
+import ReactMarkdown from "react-markdown";
+
 type Source = { id: number; label: string; url: string };
 type Item = {
   id: number;
@@ -13,31 +16,13 @@ export default function NewsItemBlock({ item }: { item: Item }) {
     tags = JSON.parse(item.tags);
   } catch {}
 
-  const paragraphs = item.content.split("\n\n").filter(Boolean);
-
   return (
     <div className="rounded-lg bg-zinc-800/50 border border-zinc-700/50 p-4">
       <h3 className="font-semibold text-zinc-100 mb-3 text-sm leading-snug">
         {item.title}
       </h3>
-      <div className="news-content space-y-1 text-sm">
-        {paragraphs.map((p, i) => {
-          if (p.startsWith("- ") || p.startsWith("• ")) {
-            const lines = p.split("\n").filter(Boolean);
-            return (
-              <ul key={i} className="list-disc pl-4 space-y-1 text-zinc-300">
-                {lines.map((l, j) => (
-                  <li key={j}>{l.replace(/^[-•]\s*/, "")}</li>
-                ))}
-              </ul>
-            );
-          }
-          return (
-            <p key={i} className="text-zinc-300 leading-relaxed">
-              {p}
-            </p>
-          );
-        })}
+      <div className="news-content text-sm">
+        <ReactMarkdown>{item.content}</ReactMarkdown>
       </div>
       {tags.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-3">
