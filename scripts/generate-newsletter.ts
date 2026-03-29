@@ -16,9 +16,18 @@ async function generateNewsletter() {
     messages: [
       {
         role: "user",
-        content: `오늘은 ${dateStr}입니다. 지난 7일간의 AI 분야 주요 뉴스를 조사하고, 아래 JSON 형식으로 한국어 뉴스레터를 작성해주세요.
+        content: `오늘은 ${dateStr}입니다. 지난 7일간의 AI 분야 주요 뉴스를 웹 검색으로 조사한 뒤, 아래 JSON 형식으로 한국어 뉴스레터를 작성해주세요.
 
-반드시 웹 검색을 통해 실제 최신 뉴스를 기반으로 작성하세요.
+각 아이템의 content 필드는 반드시 다음 3개 섹션을 마크다운 불릿 형식으로 구성하세요:
+
+**📌 무슨 일이 있었나**
+- 핵심 사실을 3~5개 불릿으로 간결하게 정리
+
+**💡 왜 중요한가**
+- 이 소식이 산업/기술/사회적으로 갖는 의미와 파급력을 2~3개 불릿으로 설명
+
+**🔍 더 생각해볼 포인트**
+- 독자가 추가로 고려하거나 주목해야 할 시사점·질문·리스크를 2~3개 불릿으로 제시
 
 출력 형식 (JSON만 출력, 다른 텍스트 없이):
 {
@@ -34,7 +43,7 @@ async function generateNewsletter() {
         {
           "order": 1,
           "title": "뉴스 제목",
-          "content": "상세 내용 (400~600자)",
+          "content": "**📌 무슨 일이 있었나**\\n- ...\\n- ...\\n\\n**💡 왜 중요한가**\\n- ...\\n- ...\\n\\n**🔍 더 생각해볼 포인트**\\n- ...\\n- ...",
           "tags": ["태그1", "태그2"],
           "sources": [{ "label": "출처명", "url": "https://..." }]
         }
@@ -73,16 +82,21 @@ async function generateNewsletter() {
   });
 
   // 최종 텍스트 응답 추출
-  let jsonText = "";
+  let rawText = "";
   for (const block of response.content) {
     if (block.type === "text") {
-      jsonText = block.text;
+      rawText = block.text;
       break;
     }
   }
 
-  // JSON 파싱 (코드 블록 제거)
-  jsonText = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  // JSON 객체만 추출 (앞뒤 텍스트 제거)
+  const start = rawText.indexOf("{");
+  const end = rawText.lastIndexOf("}");
+  if (start === -1 || end === -1) {
+    throw new Error(`JSON을 찾을 수 없습니다. 응답:\n${rawText.slice(0, 500)}`);
+  }
+  const jsonText = rawText.slice(start, end + 1);
   const newsletter = JSON.parse(jsonText);
 
   console.log("📝 생성된 뉴스레터:", newsletter.title);
