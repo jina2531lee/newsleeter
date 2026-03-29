@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/db";
 import NewsletterCard from "@/components/NewsletterCard";
+import type { Newsletter, Section } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
+
+type NewsletterWithSections = Newsletter & { sections: Pick<Section, "category" | "title">[] };
 
 export default async function HomePage() {
   const newsletters = await prisma.newsletter.findMany({
@@ -27,7 +30,7 @@ export default async function HomePage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {newsletters.map((n) => (
+          {newsletters.map((n: NewsletterWithSections) => (
             <NewsletterCard
               key={n.id}
               n={{ ...n, date: n.date.toISOString() }}
