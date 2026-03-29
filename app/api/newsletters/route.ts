@@ -20,6 +20,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = req.headers.get("authorization");
+  if (!auth || auth !== `Bearer ${process.env.NEWSLETTER_API_SECRET}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await req.json();
   const newsletter = await prisma.newsletter.create({
     data: {
