@@ -9,95 +9,94 @@ const dateStr = today.toLocaleDateString("ko-KR", { year: "numeric", month: "lon
 async function generateNewsletter() {
   console.log("🔍 최신 AI 뉴스 검색 중...");
 
+  const itemSchema = {
+    type: "object",
+    properties: {
+      order: { type: "number" },
+      title: { type: "string" },
+      content: { type: "string", description: "마크다운 형식. **📌 무슨 일이 있었나** / **💡 왜 중요한가** / **🔍 더 생각해볼 포인트** 3단 구조, 각 섹션은 불릿 포인트로 작성" },
+      tags: { type: "array", items: { type: "string" } },
+      sources: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: { label: { type: "string" }, url: { type: "string" } },
+          required: ["label", "url"],
+        },
+      },
+    },
+    required: ["order", "title", "content", "tags", "sources"],
+  };
+
   const response = await client.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 8000,
-    tools: [{ type: "web_search_20250305" as "web_search_20250305", name: "web_search" }],
+    max_tokens: 12000,
+    tools: [
+      { type: "web_search_20250305" as "web_search_20250305", name: "web_search" },
+      {
+        name: "publish_newsletter",
+        description: "조사한 AI 뉴스를 바탕으로 주간 뉴스레터를 발행합니다.",
+        input_schema: {
+          type: "object" as const,
+          properties: {
+            date: { type: "string", description: "오늘 날짜 KST 오전 7시 ISO8601" },
+            title: { type: "string" },
+            summary: { type: "string", description: "이번 주 핵심 동향 2~3문장 요약" },
+            sections: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  category: { type: "string", enum: ["SEARCH_AGENT", "PHYSICAL_AI", "COMMUNITY", "INDUSTRY", "ANALYSIS"] },
+                  title: { type: "string" },
+                  order: { type: "number" },
+                  items: { type: "array", items: itemSchema, minItems: 2 },
+                },
+                required: ["category", "title", "order", "items"],
+              },
+            },
+          },
+          required: ["date", "title", "summary", "sections"],
+        },
+      },
+    ],
     messages: [
       {
         role: "user",
-        content: `오늘은 ${dateStr}입니다. 지난 7일간의 AI 분야 주요 뉴스를 웹 검색으로 조사한 뒤, 아래 JSON 형식으로 한국어 뉴스레터를 작성해주세요.
+        content: `오늘은 ${dateStr}입니다. 지난 7일간의 AI 분야 주요 뉴스를 웹 검색으로 충분히 조사한 뒤, publish_newsletter 툴을 호출해 한국어 뉴스레터를 작성해주세요.
 
-각 아이템의 content 필드는 반드시 다음 3개 섹션을 마크다운 불릿 형식으로 구성하세요:
+섹션 구성:
+- SEARCH_AGENT: 검색·에이전트 AI
+- PHYSICAL_AI: 피지컬 AI (로봇, 자율주행 등)
+- COMMUNITY: 커뮤니티 반응 (Reddit, X, YouTube 등)
+- INDUSTRY: 산업·정책·투자 관점
+- ANALYSIS: 정리 및 배경/원인 분석
 
+각 아이템의 content는 반드시 아래 3단 구조로 작성하세요:
 **📌 무슨 일이 있었나**
-- 핵심 사실을 3~5개 불릿으로 간결하게 정리
+- 핵심 사실 3~5개 불릿
 
 **💡 왜 중요한가**
-- 이 소식이 산업/기술/사회적으로 갖는 의미와 파급력을 2~3개 불릿으로 설명
+- 의미와 파급력 2~3개 불릿
 
 **🔍 더 생각해볼 포인트**
-- 독자가 추가로 고려하거나 주목해야 할 시사점·질문·리스크를 2~3개 불릿으로 제시
-
-출력 형식 (JSON만 출력, 다른 텍스트 없이):
-{
-  "date": "ISO8601 형식 날짜 (오늘 날짜 KST 오전 7시)",
-  "title": "로완의 AI 뉴스레터 — ${dateStr} (주간 호)",
-  "summary": "이번 주 핵심 동향을 2~3문장으로 요약",
-  "sections": [
-    {
-      "category": "SEARCH_AGENT",
-      "title": "검색·에이전트 AI",
-      "order": 1,
-      "items": [
-        {
-          "order": 1,
-          "title": "뉴스 제목",
-          "content": "**📌 무슨 일이 있었나**\\n- ...\\n- ...\\n\\n**💡 왜 중요한가**\\n- ...\\n- ...\\n\\n**🔍 더 생각해볼 포인트**\\n- ...\\n- ...",
-          "tags": ["태그1", "태그2"],
-          "sources": [{ "label": "출처명", "url": "https://..." }]
-        }
-      ]
-    },
-    {
-      "category": "PHYSICAL_AI",
-      "title": "피지컬 AI",
-      "order": 2,
-      "items": [...]
-    },
-    {
-      "category": "COMMUNITY",
-      "title": "커뮤니티 반응",
-      "order": 3,
-      "items": [...]
-    },
-    {
-      "category": "INDUSTRY",
-      "title": "산업·정책·투자 관점",
-      "order": 4,
-      "items": [...]
-    },
-    {
-      "category": "ANALYSIS",
-      "title": "정리 및 배경/원인 분석",
-      "order": 5,
-      "items": [...]
-    }
-  ]
-}
-
-각 섹션에 최소 2개 이상의 아이템을 포함하세요. 실제 출처 URL을 정확히 기입하세요.`,
+- 시사점·질문·리스크 2~3개 불릿`,
       },
     ],
   });
 
-  // 최종 텍스트 응답 추출
-  let rawText = "";
+  // tool_use 블록에서 newsletter 데이터 추출
+  let newsletter: Record<string, unknown> | null = null;
   for (const block of response.content) {
-    if (block.type === "text") {
-      rawText = block.text;
+    if (block.type === "tool_use" && block.name === "publish_newsletter") {
+      newsletter = block.input as Record<string, unknown>;
       break;
     }
   }
-
-  // JSON 객체만 추출 (앞뒤 텍스트 제거)
-  const start = rawText.indexOf("{");
-  const end = rawText.lastIndexOf("}");
-  if (start === -1 || end === -1) {
-    throw new Error(`JSON을 찾을 수 없습니다. 응답:\n${rawText.slice(0, 500)}`);
+  if (!newsletter) {
+    const textBlock = response.content.find((b) => b.type === "text");
+    throw new Error(`publish_newsletter 툴이 호출되지 않았습니다. 응답: ${textBlock ? (textBlock as { text: string }).text.slice(0, 300) : "없음"}`);
   }
-  const jsonText = rawText.slice(start, end + 1);
-  const newsletter = JSON.parse(jsonText);
 
   console.log("📝 생성된 뉴스레터:", newsletter.title);
 
