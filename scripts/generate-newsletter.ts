@@ -115,6 +115,8 @@ async function generateNewsletter() {
 
   if (!res.ok) {
     const err = await res.text();
+    console.error("API 응답 바디:", err);
+    console.error("뉴스레터 데이터:", JSON.stringify(newsletter, null, 2).slice(0, 1000));
     throw new Error(`API 오류 ${res.status}: ${err}`);
   }
 
